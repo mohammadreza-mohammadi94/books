@@ -14,6 +14,11 @@ This repository contains a collection of books related to:
 ## Available Books
 
 <!-- BOOKS-LIST:START -->
-Book list will be generated automatically.
+
+
+### Maths Statistics
+
+- [_Statistics_Witte](books/maths-statistics/_Statistics_Witte.pdf) `.PDF`
+
 <!-- BOOKS-LIST:END -->
 
