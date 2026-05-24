@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+      - master
+    paths:
+      - 'books/**'           # هر تغییری در پوشه books
+      - 'generate_readme.py' # یا خود اسکریپت
+      - '.github/workflows/update-books.yml'  # یا خود workflow
+
+  # اجازه اجرای دستی هم بده
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,26 +19,52 @@ permissions:
 jobs:
   update-readme:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+
+      - name: List book directory structure (for debugging)
+        run: |
+          echo "📁 Book directory structure:"
+          if [ -d "books" ]; then
+            ls -la books/
+            find books -type f -name "*.pdf" -o -name "*.epub" | head -20
+          else
+            echo "⚠️ No books directory found"
+          fi
 
       - name: Generate README
         run: python generate_readme.py
 
-      - name: Commit Changes
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --quiet README.md || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+          
           git add README.md
+          git commit -m "docs: auto-update README book list [skip ci]"
+          
+          # استفاده از GITHUB_TOKEN برای push
+          git push origin HEAD:${GITHUB_REF_NAME}
 
-          git diff --staged --quiet || git commit -m "docs: auto-update README book list"
-
-          git push
+      - name: Summary
+        run: |
+          echo "## 📊 Book List Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ README.md has been updated" >> $GITHUB_STEP_SUMMARY
+          echo "- 📚 Books found: $(find books -type f \( -name '*.pdf' -o -name '*.epub' -o -name '*.mobi' \) 2>/dev/null | wc -l)" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,39 @@
+name: PR Book List Check
+
+on:
+    pull_request:
+        branches:
+            - main
+            - master
+        paths:
+            - "books/**"
+
+jobs:
+    check-books:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Generate README preview
+              run: |
+                  python generate_readme.py
+                  echo "## 📝 Preview of README changes" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  grep -A 50 "BOOKS-LIST:START" README.md | head -30 >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+
+            - name: Check for duplicate books
+              run: |
+                  find books -type f \( -name "*.pdf" -o -name "*.epub" \) | \
+                    awk -F/ '{print $NF}' | sort | uniq -d | \
+                    while read dup; do
+                    echo "⚠️ Duplicate filename: $dup"
+                    exit 1
+                  done || true
